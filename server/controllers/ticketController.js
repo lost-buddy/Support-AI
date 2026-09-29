@@ -6,6 +6,7 @@ const ticketPopulation = [
   { path: "customer", select: "name email role" },
   { path: "assignedAgent", select: "name email role" },
   { path: "messages.author", select: "name role" },
+  { path: "statusHistory.changedBy", select: "name role" },
 ];
 
 function isStaff(user) {
@@ -93,11 +94,13 @@ exports.assignTicket = async (req, res) => {
     const agent = await User.findOne({ _id: agentId, role: "agent" });
     if (!agent) return res.status(404).json({ message: "Support agent not found" });
 
-    const ticket = await Ticket.findByIdAndUpdate(
-      req.params.id,
-      { assignedAgent: agent._id, status: "In Progress" },
-      { new: true, runValidators: true }
-    ).populate(ticketPopulation);
+    const currentTicket = await Ticket.findById(req.params.id).select("status");
+    if (!currentTicket) return res.status(404).json({ message: "Ticket not found" });
+    const assignmentUpdate = { $set: { assignedAgent: agent._id, status: "In Progress" } };
+    if (currentTicket.status !== "In Progress") {
+      assignmentUpdate.$push = { statusHistory: { status: "In Progress", changedBy: req.user.id } };
+    }
+    const ticket = await Ticket.findByIdAndUpdate(req.params.id, assignmentUpdate, { new: true, runValidators: true }).populate(ticketPopulation);
     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
     res.json({ message: "Ticket assigned", ticket });
   } catch (error) {
@@ -116,7 +119,14 @@ exports.updateTicket = async (req, res) => {
       return res.status(400).json({ message: "Provide a status or priority to update" });
     }
 
-    const ticket = await Ticket.findByIdAndUpdate(req.params.id, updates, {
+    const current = await Ticket.findById(req.params.id).select("status");
+    if (!current) return res.status(404).json({ message: "Ticket not found" });
+    const updateOperation = { $set: updates };
+    if (updates.status && updates.status !== current.status) {
+      updateOperation.$push = { statusHistory: { status: updates.status, changedBy: req.user.id } };
+    }
+
+    const ticket = await Ticket.findByIdAndUpdate(req.params.id, updateOperation, {
       new: true,
       runValidators: true,
     }).populate(ticketPopulation);
@@ -148,7 +158,10 @@ exports.addMessage = async (req, res) => {
     const ticket = await findAccessibleTicket(req.params.id, req.user);
     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
     ticket.messages.push({ author: req.user.id, body });
-    if (ticket.status === "Open" && isStaff(req.user)) ticket.status = "In Progress";
+    if (ticket.status === "Open" && isStaff(req.user)) {
+      ticket.status = "In Progress";
+      ticket.statusHistory.push({ status: "In Progress", changedBy: req.user.id });
+    }
     await ticket.save();
     await ticket.populate("messages.author", "name role");
     res.status(201).json({ message: "Reply saved", ticket });

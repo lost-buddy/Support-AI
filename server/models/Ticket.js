@@ -7,6 +7,12 @@ const messageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+const statusEventSchema = new mongoose.Schema({
+  status: { type: String, enum: ["Open", "In Progress", "Resolved", "Closed"], required: true },
+  changedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  createdAt: { type: Date, default: Date.now },
+});
+
 const ticketSchema = new mongoose.Schema(
   {
     subject: {
@@ -63,6 +69,7 @@ const ticketSchema = new mongoose.Schema(
       default: "",
     },
     messages: { type: [messageSchema], default: [] },
+    statusHistory: { type: [statusEventSchema], default: [] },
   },
   { timestamps: true }
 );

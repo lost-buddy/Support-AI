@@ -30,7 +30,20 @@ function issueAppToken(user) {
 }
 
 function publicUser(user) {
-  return { id: user._id, name: user.name, email: user.email, role: user.role };
+  return {
+    id: String(user._id),
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    profilePicture: user.profilePicture || "",
+    phoneNumber: user.phoneNumber || "",
+    notificationPreferences: {
+      ticketUpdates: user.notificationPreferences?.ticketUpdates !== false,
+      supportReplies: user.notificationPreferences?.supportReplies !== false,
+    },
+    createdAt: user.createdAt,
+    hasPassword: Boolean(user.password),
+  };
 }
 
 // Register
@@ -66,12 +79,7 @@ exports.register = async (req, res) => {
     res.status(201).json({
       message: "Registration successful",
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: publicUser(user),
     });
   } catch (error) {
     if (error.code === 11000) return res.status(409).json({ message: "Email already registered" });
@@ -115,12 +123,7 @@ exports.login = async (req, res) => {
     res.json({
       message: "Login successful",
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: publicUser(user),
     });
   } catch (error) {
     res.status(500).json({ message: "Could not sign in" });
@@ -163,6 +166,10 @@ exports.googleLogin = async (req, res) => {
 
     const user = await User.findOne({ googleId: payload.sub });
     if (user) {
+      if (!user.profilePicture && payload.picture) {
+        user.profilePicture = payload.picture;
+        await user.save();
+      }
       return res.json({ message: "Google sign-in successful", token: issueAppToken(user), user: publicUser(user) });
     }
 
@@ -173,7 +180,7 @@ exports.googleLogin = async (req, res) => {
     }
 
     try {
-      const newUser = await User.create({ name: payload.name.trim(), email: normalizedEmail, googleId: payload.sub });
+      const newUser = await User.create({ name: payload.name.trim(), email: normalizedEmail, googleId: payload.sub, profilePicture: payload.picture || "" });
       return res.status(201).json({ message: "Google account created", token: issueAppToken(newUser), user: publicUser(newUser) });
     } catch (error) {
       if (error.code === 11000) {

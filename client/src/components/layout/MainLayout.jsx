@@ -26,6 +26,8 @@ export const MainLayout = ({ children, activeNav, setActiveNav, search, setSearc
           openTicketsCount={openTicketsCount}
           onRefresh={onRefresh}
           refreshing={refreshing}
+          isCustomer={user?.role === 'customer'}
+          onOpenNotifications={() => setActiveNav('Notifications')}
         />
         <main className="page-container">{children}</main>
       </div>

@@ -8,6 +8,21 @@ const userSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    profilePicture: {
+      type: String,
+      default: "",
+      maxlength: 2048,
+    },
+    phoneNumber: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 32,
+    },
+    notificationPreferences: {
+      ticketUpdates: { type: Boolean, default: true },
+      supportReplies: { type: Boolean, default: true },
+    },
     email: {
       type: String,
       required: true,

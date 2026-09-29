@@ -17,6 +17,12 @@ export const normalizeTicket = (ticket) => ({
     authorRole: message.author?.role || "agent",
     body: message.body || "",
   })),
+  statusHistory: (ticket.statusHistory || []).map((event) => ({
+    ...event,
+    id: String(event._id || `${ticket._id || ticket.id}-${event.createdAt}-${event.status}`),
+    changedByName: event.changedBy?.name || "Support team",
+    changedByRole: event.changedBy?.role || "agent",
+  })),
 });
 
 export const getTickets = async () => {

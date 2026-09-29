@@ -17,9 +17,9 @@ export const Dashboard = ({ tickets, allTickets = tickets, filter, setFilter, on
     <>
       <div className="page-header">
         <div className="page-title-group">
-          <p className="eyebrow">WORKSPACE OVERVIEW</p>
+          <p className="eyebrow">{canUseAI ? 'WORKSPACE OVERVIEW' : 'CUSTOMER OVERVIEW'}</p>
           <h1>Overview</h1>
-          <p>A clear view of the requests that need your team.</p>
+          <p>{canUseAI ? 'A clear view of the requests that need your team.' : 'Track your support requests and recent responses.'}</p>
         </div>
         <Button onClick={onOpenCreate}>Create Ticket</Button>
       </div>
@@ -38,7 +38,7 @@ export const Dashboard = ({ tickets, allTickets = tickets, filter, setFilter, on
         </div>
 
         <div className="sidebar-panel">
-          <AIInsights onTryAI={onTryAI} disabled={!canUseAI} />
+          {canUseAI && <AIInsights onTryAI={onTryAI} />}
           <RecentActivity tickets={allTickets} />
         </div>
       </div>

@@ -3,7 +3,7 @@ import { TicketStatusBadge } from '../../tickets/TicketStatusBadge';
 import { TicketPriorityBadge } from '../../tickets/TicketPriorityBadge';
 import { EmptyState } from '../common/EmptyState';
 
-export const TicketTable = ({ tickets, onSelectTicket }) => {
+export const TicketTable = ({ tickets, onSelectTicket, showUpdatedAt = false }) => {
   if (tickets.length === 0) return <EmptyState />;
 
   return (
@@ -17,6 +17,7 @@ export const TicketTable = ({ tickets, onSelectTicket }) => {
             <th>Priority</th>
             <th>Status</th>
             <th>Date</th>
+            {showUpdatedAt && <th>Last updated</th>}
           </tr>
         </thead>
         <tbody>
@@ -45,6 +46,7 @@ export const TicketTable = ({ tickets, onSelectTicket }) => {
               <td><TicketPriorityBadge priority={ticket.priority} /></td>
               <td><TicketStatusBadge status={ticket.status} /></td>
               <td>{ticket.date}</td>
+              {showUpdatedAt && <td>{ticket.updatedAt ? new Date(ticket.updatedAt).toLocaleDateString() : '—'}</td>}
             </tr>
           ))}
         </tbody>

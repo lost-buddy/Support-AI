@@ -6,10 +6,14 @@ import { Tickets } from "./pages/Tickets";
 import { Customers } from "./pages/Customers";
 import { Analytics } from "./pages/Analytics";
 import { Settings } from "./pages/Settings";
+import { HelpCenter } from "./pages/HelpCenter";
+import { Notifications } from "./pages/Notifications";
+import { Profile } from "./pages/Profile";
 import { TicketDetails } from "./tickets/TicketDetails";
 import { CreateTicketModal } from "./tickets/CreateTicketModal";
 import { Button } from "./components/common/Button";
 import { addTicketMessage, analyzeTicket, createTicket, getTickets, updateTicket } from "./api/ticket";
+import { getCurrentUser } from "./api/auth";
 import "./App.css";
 
 function readUser() {
@@ -32,6 +36,16 @@ export default function App() {
   const [modalError, setModalError] = useState("");
   const [toast, setToast] = useState("");
   const canManage = ["admin", "agent"].includes(session.user?.role);
+  const isCustomer = session.user?.role === "customer";
+  const customerPages = ["Overview", "My Tickets", "Help Center", "Notifications", "Profile", "Settings"];
+  const staffPages = ["Overview", "All Tickets", "Customers", "Analytics", "Settings"];
+  const allowedPages = isCustomer ? customerPages : staffPages;
+  const visibleNav = allowedPages.includes(activeNav) ? activeNav : "Overview";
+
+  const updateSessionUser = useCallback((user) => {
+    localStorage.setItem("user", JSON.stringify(user));
+    setSession((current) => ({ ...current, user }));
+  }, []);
 
   const signOut = useCallback(() => {
     localStorage.removeItem("token");
@@ -68,6 +82,19 @@ export default function App() {
     });
     return () => { cancelled = true; };
   }, [session.token]);
+
+  useEffect(() => {
+    if (!session.token) return undefined;
+    let cancelled = false;
+    getCurrentUser().then((user) => {
+      if (!cancelled) updateSessionUser(user);
+    }).catch((requestError) => {
+      if (!cancelled && requestError.response?.status !== 401) {
+        setError(requestError.response?.data?.message || "Could not refresh your account profile.");
+      }
+    });
+    return () => { cancelled = true; };
+  }, [session.token, updateSessionUser]);
 
   useEffect(() => {
     const expireSession = () => { signOut(); setToast("Your session expired. Please sign in again."); };
@@ -155,13 +182,17 @@ export default function App() {
 
   return (
     <>
-      <MainLayout activeNav={activeNav} setActiveNav={setActiveNav} search={search} setSearch={setSearch} totalTickets={tickets.length} openTicketsCount={openTicketsCount} user={session.user} onLogout={signOut} onRefresh={() => refreshTickets(true)} refreshing={refreshing}>
+      <MainLayout activeNav={visibleNav} setActiveNav={setActiveNav} search={search} setSearch={setSearch} totalTickets={tickets.length} openTicketsCount={openTicketsCount} user={session.user} onLogout={signOut} onRefresh={() => refreshTickets(true)} refreshing={refreshing}>
         {error ? <div className="page-state page-error"><h2>We couldn’t load your workspace</h2><p>{error}</p><Button onClick={() => refreshTickets()}>Try again</Button></div> : loading ? <div className="page-state"><span className="loader" /><p>Loading your support workspace…</p></div> : <>
-          {activeNav === "Overview" && <Dashboard tickets={filteredTickets} allTickets={tickets} filter={filter} setFilter={setFilter} onSelectTicket={setSelectedTicket} onOpenCreate={() => { setModalError(""); setIsCreateOpen(true); }} onTryAI={() => { const target = tickets.find((ticket) => ticket.status === "Open") || tickets[0]; if (target) setSelectedTicket(target); }} canUseAI={canManage} />}
-          {activeNav === "All Tickets" && <Tickets tickets={filteredTickets} filter={filter} setFilter={setFilter} onSelectTicket={setSelectedTicket} onOpenCreate={() => { setModalError(""); setIsCreateOpen(true); }} />}
-          {activeNav === "Customers" && <Customers tickets={tickets} />}
-          {activeNav === "Analytics" && <Analytics tickets={tickets} />}
-          {activeNav === "Settings" && <Settings user={session.user} />}
+          {visibleNav === "Overview" && <Dashboard tickets={filteredTickets} allTickets={tickets} filter={filter} setFilter={setFilter} onSelectTicket={setSelectedTicket} onOpenCreate={() => { setModalError(""); setIsCreateOpen(true); }} onTryAI={() => { const target = tickets.find((ticket) => ticket.status === "Open") || tickets[0]; if (target) setSelectedTicket(target); }} canUseAI={canManage} />}
+          {visibleNav === "All Tickets" && canManage && <Tickets tickets={filteredTickets} filter={filter} setFilter={setFilter} onSelectTicket={setSelectedTicket} onOpenCreate={() => { setModalError(""); setIsCreateOpen(true); }} />}
+          {visibleNav === "My Tickets" && isCustomer && <Tickets customerView tickets={filteredTickets} filter={filter} setFilter={setFilter} onSelectTicket={setSelectedTicket} onOpenCreate={() => { setModalError(""); setIsCreateOpen(true); }} />}
+          {visibleNav === "Help Center" && isCustomer && <HelpCenter onCreateTicket={() => { setModalError(""); setIsCreateOpen(true); }} />}
+          {visibleNav === "Notifications" && isCustomer && <Notifications tickets={tickets} preferences={session.user.notificationPreferences} onSelectTicket={setSelectedTicket} />}
+          {visibleNav === "Profile" && isCustomer && <Profile user={session.user} onUserUpdated={updateSessionUser} />}
+          {visibleNav === "Customers" && canManage && <Customers tickets={tickets} />}
+          {visibleNav === "Analytics" && canManage && <Analytics tickets={tickets} />}
+          {visibleNav === "Settings" && <Settings user={session.user} onUserUpdated={updateSessionUser} />}
         </>}
         <TicketDetails ticket={selectedTicket} user={session.user} onClose={() => setSelectedTicket(null)} onUpdateTicket={handleUpdateTicket} onAnalyze={handleAnalyze} onSendReply={handleSendReply} analyzing={analyzing} canManage={canManage} saving={saving} />
         <CreateTicketModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onCreate={handleCreateTicket} saving={saving} error={modalError} />

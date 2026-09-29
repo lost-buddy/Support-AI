@@ -1,20 +1,32 @@
-import { LayoutDashboard, Ticket, Users, BarChart3, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Ticket, Users, BarChart3, Settings, LogOut, CircleHelp, Bell, UserRound } from 'lucide-react';
 import { Brand } from '../common/Brand';
+import { UserAvatar } from '../common/UserAvatar';
 
-const navItems = [
+const staffNavItems = [
   { label: 'Overview', icon: LayoutDashboard },
   { label: 'All Tickets', icon: Ticket },
   { label: 'Customers', icon: Users },
   { label: 'Analytics', icon: BarChart3 },
 ];
 
-export const Sidebar = ({ activeNav, setActiveNav, isOpen, setIsOpen, user, totalTickets, onLogout }) => (
+const customerNavItems = [
+  { label: 'Overview', icon: LayoutDashboard },
+  { label: 'My Tickets', icon: Ticket },
+  { label: 'Help Center', icon: CircleHelp },
+  { label: 'Notifications', icon: Bell },
+  { label: 'Profile', icon: UserRound },
+];
+
+export const Sidebar = ({ activeNav, setActiveNav, isOpen, setIsOpen, user, totalTickets, onLogout }) => {
+  const isCustomer = user?.role === 'customer';
+  const navItems = isCustomer ? customerNavItems : staffNavItems;
+  return (
   <>
     {isOpen && <button className="sidebar-scrim" aria-label="Close navigation" onClick={() => setIsOpen(false)} />}
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-brand"><Brand /></div>
       <div className="workspace-select">
-        <div className="workspace-avatar">{(user?.name || 'S').slice(0, 1).toUpperCase()}</div>
+        <UserAvatar user={user} className="workspace-avatar" />
         <div className="workspace-info"><strong>Support workspace</strong><span>Connected account</span></div>
       </div>
       <div className="nav-section">WORKSPACE</div>
@@ -33,11 +45,12 @@ export const Sidebar = ({ activeNav, setActiveNav, isOpen, setIsOpen, user, tota
       </nav>
       <div className="sidebar-footer">
         <div className="profile-card">
-          <div className="profile-avatar">{(user?.name || '?').split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</div>
+          <UserAvatar user={user} />
           <div className="profile-meta"><strong>{user?.name || 'Account'}</strong><span>{user?.role || 'Member'}</span></div>
           <button className="icon-button logout-button" aria-label="Sign out" title="Sign out" onClick={onLogout}><LogOut size={16} /></button>
         </div>
       </div>
     </aside>
   </>
-);
+  );
+};
