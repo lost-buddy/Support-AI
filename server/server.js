@@ -18,8 +18,7 @@ const allowedOrigins = configuredOrigins?.length
 app.use(cors({
   origin(origin, callback) {
     // Requests without an Origin header (for example, health probes) are not browser CORS requests.
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error(`Origin ${origin} is not allowed by CORS`));
+    return callback(null, !origin || allowedOrigins.includes(origin));
   },
   credentials: true,
 }));
@@ -48,6 +47,9 @@ app.use((error, req, res, next) => {
 });
 
 async function startServer() {
+  if (process.env.NODE_ENV === "production" && allowedOrigins.length === 0) {
+    throw new Error("CLIENT_ORIGIN is required in production. Set it to the deployed frontend origin (for example, https://your-app.vercel.app).");
+  }
   if (!process.env.MONGO_URI) throw new Error("MONGO_URI is required in server/.env");
   if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is required in server/.env");
   if (process.env.JWT_SECRET.length < 32) throw new Error("JWT_SECRET must contain at least 32 characters");
