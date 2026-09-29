@@ -8,8 +8,21 @@ const { ensureAdminAccount } = require("./services/bootstrapService");
 const app = express();
 
 // Middleware
-const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:5173").split(",").map((origin) => origin.trim());
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+const configuredOrigins = process.env.CLIENT_ORIGIN
+  ?.split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+const allowedOrigins = configuredOrigins?.length
+  ? configuredOrigins
+  : process.env.NODE_ENV === "production" ? [] : ["http://localhost:5173"];
+app.use(cors({
+  origin(origin, callback) {
+    // Requests without an Origin header (for example, health probes) are not browser CORS requests.
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`Origin ${origin} is not allowed by CORS`));
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: "1mb" }));
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/tickets", require("./routes/ticketRoutes"));

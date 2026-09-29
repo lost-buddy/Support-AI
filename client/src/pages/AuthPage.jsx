@@ -22,7 +22,7 @@ export const AuthPage = ({ onAuthenticated }) => {
         : await loginUser({ email: form.email, password: form.password });
       onAuthenticated({ token: result.token, user: result.user });
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Could not reach SupportAI. Check that the API server is running.");
+      setError(requestError.response?.data?.message || "Could not reach SupportAI. Check the API URL and that the API server is available.");
     } finally {
       setLoading(false);
     }
